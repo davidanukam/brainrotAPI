@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, BLOB
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -25,15 +25,30 @@ class Brainrot(Base):
     __tablename__="Brainrots"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    description = Column(String(100), nullable=False, unique=True)
-    value = Column(String(100), nullable=False)
+    name = Column(String, nullable=False, unique=True)
+    description = Column(String, nullable=False)
+    image = Column(String, nullable=False)
+    value = Column(String, nullable=False)
 
 # Link Database Model to the Engine
 Base.metadata.create_all(engine)
 
 # Pydantic Models (Dataclass)
+class BrainrotCreate(BaseModel):
+    name:str
+    description:str
+    image:str
+    value:str
 
+class BrainrotResponse(BaseModel):
+    id:int
+    name:str
+    description:str
+    image:str
+    value:str
+    
+    class Config:
+        from_attributes=True
 
 def get_db():
     db = SessionLocal()
@@ -48,3 +63,22 @@ get_db()
 @app.get("/")
 def root():
     return {"message" : "learning"}
+
+@app.get("/brainrots/{brainrot_id}", response_model=BrainrotResponse)
+def get_brainrot(brainrot_id: int, db: Session = Depends(get_db)):
+    brainrot = db.query(Brainrot).filter(Brainrot.id == brainrot_id).first()
+    if not brainrot:
+        raise HTTPException(status_code=404, detail="Brainrot not found!")
+    return brainrot
+
+@app.post("/brainrots/", response_model=BrainrotResponse)
+def create_brainrot(brainrot: BrainrotCreate, db: Session = Depends(get_db)):
+    if db.query(Brainrot).filter(Brainrot.name == brainrot.name).first():
+        raise HTTPException(status_code=404, detail="Brainrot already exists!")
+    
+    # Create a new Brainrot
+    new_brainrot = Brainrot(**brainrot.model_dump())
+    db.add(new_brainrot)
+    db.commit()
+    db.refresh(new_brainrot)
+    return new_brainrot
