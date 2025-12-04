@@ -1,0 +1,11 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "name": "Brainrots_Database",
+      "database": "${workspaceFolder:brainrotAPI}/brainrots.db"
+    }
+  ],
+  "sqltools.useNodeRuntime": true
+}
